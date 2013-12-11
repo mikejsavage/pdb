@@ -17,7 +17,7 @@ shoulder will be able to read your passwords.
 Requirements
 ------------
 
-lua, luafilesystem, luacrypto, lua-cjson for pdb
+OpenSSL, lua, luafilesystem, luacrypto, lua-cjson for pdb  
 xdotool, dmenu for pdbmenu
 
 
