@@ -1,0 +1,179 @@
+#! /usr/bin/lua
+
+-- libs
+local crypto = require( "crypto" )
+local lfs = require( "lfs" )
+local json = require( "cjson.safe" )
+
+-- config
+local Cipher = "aes-256-ctr"
+local KeyLength = 32
+local IVLength = 16
+
+-- consts
+local Help =
+	"Usage: " .. arg[ 0 ] .. " <command> [args]\n"
+	.. "where <command> is one of the following:\n"
+	.. "\n"
+	.. "genkey        - generate a private key for encrypting your passwords\n"
+	.. "init          - creates an initial empty database\n"
+	.. "add <name>    - prompts you to enter a password for <name>\n"
+	.. "get <name>    - prints the password stored under <name>\n"
+	.. "delete <name> - deleted the password stored under <name>\n"
+	.. "list          - lists the names of all stored passwords\n"
+	.. "touch         - decrypts, sanity checks and reencrypts the database\n"
+
+local commands = { "genkey", "init", "add", "get", "delete", "list", "touch" }
+
+for _, command in ipairs( commands ) do
+	commands[ command ] = true
+end
+
+local dir = os.getenv( "HOME" ) .. "/.pdb/"
+local paths = { db = dir .. "db", key = dir .. "key" }
+
+local random = assert( io.open( "/dev/random", "r" ) )
+local urandom = assert( io.open( "/dev/urandom", "r" ) )
+
+-- we might need this later
+local passwordToAdd
+
+-- some helpers
+local function check( condition, form, ... )
+	if not condition then
+		io.stdout:write( form:format( ... ) .. "\n" )
+
+		os.exit( 1 )
+	end
+end
+
+local function loadKey()
+	local file = assert( io.open( paths.key, "r" ) )
+
+	local key = file:read( "*all" )
+	assert( key:len() == KeyLength, "bad key file" )
+
+	assert( file:close() )
+
+	return key
+end
+
+local function loadDB( key )
+	local file = assert( io.open( paths.db, "r" ) )
+
+	local contents = assert( file:read( "*all" ) )
+	assert( file:close() )
+
+	local iv, c = contents:match( "^(" .. string.rep( ".", IVLength ) .. ")(.+)$" ) 
+	assert( iv, "Corrupt DB." )
+
+	local m = crypto.decrypt( Cipher, c, key, iv )
+
+	return assert( json.decode( m ) )
+end
+
+local function writeDB( db, key )
+	local iv = assert( urandom:read( IVLength ) )
+
+	local m = assert( json.encode( db ) )
+	local c = crypto.encrypt( Cipher, m, key, iv )
+
+	local file = assert( io.open( paths.db, "w" ) )
+	assert( file:write( iv .. c ) )
+	assert( file:close() )
+end
+
+local function genkey()
+	local rfile = io.open( paths.key, "r" )
+	check( not rfile, "You already have a private key." )
+
+	print( "Generating your private key. Go do something else while we gather entropy." )
+
+	local key = ""
+
+	while key:len() < KeyLength do
+		key = key .. assert( random:read( 1 ) )
+
+		io.write( "\r" )
+		for i = 1, 32 do
+			io.write( i <= key:len() and ">" or "-" )
+		end
+		io.flush()
+	end
+
+	print( "\a" )
+
+	local wfile = assert( io.open( dir .. "key", "w" ) )
+	assert( wfile:write( key ) )
+	assert( wfile:close() )
+
+	print( "Done! You should chmod 700 ~/.pdb/key" )
+
+	os.exit( 0 )
+end
+
+-- real code starts here
+
+check( arg[ 1 ] and commands[ arg[ 1 ] ], Help )
+
+lfs.mkdir( dir )
+
+if arg[ 1 ] == "genkey" then
+	local ok, err = pcall( genkey )
+
+	check( ok, "genkey failed: %s", err )
+
+	os.exit( 0 );
+end
+
+local ok_key, key = pcall( loadKey )
+check( ok_key, "Couldn't private key: %s", key )
+
+if arg[ 1 ] == "init" then
+	local file = io.open( paths.db, "r" )
+	check( not file, "You already have a password database." )
+
+	local ok, err_write = pcall( writeDB, { }, key )
+	check( ok, "Couldn't write database: %s", err_write )
+
+	print( "Database initialised." )
+
+	os.exit( 0 )
+end
+
+if arg[ 1 ] == "add" then
+	check( arg[ 2 ], "add needs a password name." )
+
+	io.stdout:write( "Enter a password for " .. arg[ 2 ] .. ": " )
+	io.stdout:flush()
+
+	passwordToAdd = assert( io.stdin:read( "*l" ) )
+
+	check( passwordToAdd and passwordToAdd:len() > 0, "Nevermind." )
+end
+
+local ok_load, db = pcall( loadDB, key )
+check( ok_load, "Couldn't load database: %s", db )
+
+if arg[ 1 ] == "get" then
+	check( arg[ 2 ], "get needs a password name." )
+
+	if db[ arg[ 2 ] ] then
+		print( db[ arg[ 2 ] ] )
+	end
+elseif arg[ 1 ] == "add" then
+	check( not db[ arg[ 2 ] ], "%s is already in the database", arg[ 2 ] )
+
+	db[ arg[ 2 ] ] = passwordToAdd
+elseif arg[ 1 ] == "delete" then
+	check( arg[ 2 ], "delete needs a password name." )
+
+	db[ arg[ 2 ] ] = nil
+elseif arg[ 1 ] == "list" then
+	for k in pairs( db ) do
+		print( k )
+	end
+end
+
+local ok_write, err_write = pcall( writeDB, db, key )
+check( ok_write, "Couldn't write database: %s", err_write )
