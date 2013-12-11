@@ -11,7 +11,7 @@ urandom, which is also fine.
 It prompts you for your password when you are adding it rather than
 passing it as a command line argument so people can't grab it from `ps`,
 but it doesn't disable console echoing so someone looking over your
-shoulder will be able to read your passwords.
+shoulder can obviously see what you type.
 
 
 Requirements
@@ -33,7 +33,7 @@ with `pdb genkey`. This should be copied manually between computers you
 want to keep the database on and not given to anyone else.
 
 Initialise the database on one of your machines with `pdb init`. You can
-then start playing with it (`pdb add`, `pdb list`, etc. type `pdb` by
+then start playing with it (`pdb add`, `pdb list`, etc. run `pdb` by
 itself for a full list).
 
 An example session:
