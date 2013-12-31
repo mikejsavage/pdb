@@ -18,7 +18,7 @@ local SplitCipherTextPattern = "^(" .. string.rep( ".", IVLength ) .. ")(.+)(" .
 
 -- consts
 local Help =
-	"Usage: " .. arg[ 0 ] .. " <command> [args]\n"
+	"Usage: " .. arg[ 0 ] .. " <command>\n"
 	.. "where <command> is one of the following:\n"
 	.. "\n"
 	.. "genkey        - generate a private key for encrypting your passwords\n"
@@ -28,8 +28,14 @@ local Help =
 	.. "delete <name> - deleted the password stored under <name>\n"
 	.. "list          - lists the names of all stored passwords\n"
 	.. "touch         - decrypts, sanity checks and reencrypts the database\n"
+	.. "gen <name> [length] [pattern] - generates a password for <name>. [pattern] is a Lua pattern\n"
+	.. "  examples:\n"
+	.. "    gen test       - 32 characters, alphanumeric/puntuation/spaces\n"
+	.. "    gen test 16    - 16 characters, alphanumeric/puntuation/spaces\n"
+	.. "    gen test 10 %%d - 10 characters, numbers only\n"
+	.. "    gen test \"%%l \" - 32 characters, lowercase/spaces\n"
 
-local commands = { "genkey", "init", "add", "get", "delete", "list", "touch" }
+local commands = { "genkey", "init", "add", "get", "delete", "list", "touch", "gen" }
 
 for _, command in ipairs( commands ) do
 	commands[ command ] = true
@@ -185,6 +191,50 @@ elseif arg[ 1 ] == "list" then
 	for k in pairs( db ) do
 		print( k )
 	end
+elseif arg[ 1 ] == "gen" then
+	check( not db[ arg[ 2 ] ], "%s is already in the database", arg[ 2 ] )
+
+	local genLength = tonumber( arg[ 3 ] ) or 32
+	local genPattern = "[" .. ( ( ( arg[ 3 ] and not tonumber( arg[ 3 ] ) ) and arg[ 3 ] ) or arg[ 4 ] or "%w%p " ) .. "]"
+
+	-- matches is a list of characters that match genPattern
+	-- chars is matches repeated to best fill 256 chars to
+	-- accelerate generation of passwords from small charsets
+
+	local matches = { }
+	local chars = { }
+
+	for i = 0, 255 do
+		if string.char( i ):match( genPattern ) then
+			table.insert( matches, string.char( i ) )
+		end
+	end
+
+	for i = 1, math.floor( 256 / #matches ) * #matches do
+		chars[ string.char( i - 1 ) ] = matches[ ( ( i - 1 ) % #matches ) + 1 ]
+	end
+
+	print( "Generating a password for " .. arg[ 2 ] .. ". Go do something else while we gather entropy." )
+
+	local password = ""
+
+	while password:len() < genLength do
+		local c = random:read( 1 )
+
+		if chars[ c ] then
+			password = password .. chars[ c ]
+		end
+
+		io.write( "\r" )
+		for i = 1, genLength do
+			io.write( i <= password:len() and ">" or "-" )
+		end
+		io.flush()
+	end
+
+	print( "\a" )
+	
+	db[ arg[ 2 ] ] = password
 end
 
 local ok_write, err_write = pcall( writeDB, db, key )

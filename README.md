@@ -46,10 +46,16 @@ An example session:
 	Database initialised.
 	$ pdb add test 
 	Enter a password for test: fdsa
+	$ pdb gen test2
+	Generating a password for test2. Go do something else while we gather entropy.
+	>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	$ pdb list 
 	test
-	$ pdb get test 
+	test2
+	$ pdb get test
 	fdsa
+	$ pdb get test2
+	)"QI p!8j.c9g!yQ:d8Dc9XdHKWqKz\"
 
 pdbmenu pipes `pdb list` to dmenu along with any command line arguments
 you gave it, and then `pdb get`s the password you chose and types it for
