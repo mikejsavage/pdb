@@ -7,8 +7,14 @@ local json = require( "cjson.safe" )
 
 -- config
 local Cipher = "aes-256-ctr"
+local Hash = "sha256"
+local HMAC = "sha256"
+
 local KeyLength = 32
 local IVLength = 16
+local HMACLength = 32
+
+local SplitCipherTextPattern = "^(" .. string.rep( ".", IVLength ) .. ")(.+)(" .. string.rep( ".", HMACLength ) .. ")$"
 
 -- consts
 local Help =
@@ -64,8 +70,11 @@ local function loadDB( key )
 	local contents = assert( file:read( "*all" ) )
 	assert( file:close() )
 
-	local iv, c = contents:match( "^(" .. string.rep( ".", IVLength ) .. ")(.+)$" ) 
-	assert( iv, "Corrupt DB." )
+	local iv, c, hmac = contents:match( SplitCipherTextPattern ) 
+	assert( iv, "Corrupt DB" )
+
+	local key2 = crypto.digest( Hash, key )
+	assert( hmac == crypto.hmac.digest( HMAC, c, key2, true ), "Corrupt DB" )
 
 	local m = crypto.decrypt( Cipher, c, key, iv )
 
@@ -78,8 +87,11 @@ local function writeDB( db, key )
 	local m = assert( json.encode( db ) )
 	local c = crypto.encrypt( Cipher, m, key, iv )
 
+	local key2 = crypto.digest( Hash, key )
+	local hmac = crypto.hmac.digest( HMAC, c, key2, true )
+
 	local file = assert( io.open( paths.db, "w" ) )
-	assert( file:write( iv .. c ) )
+	assert( file:write( iv .. c .. hmac ) )
 	assert( file:close() )
 end
 
