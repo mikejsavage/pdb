@@ -189,3 +189,6 @@ end
 
 local ok_write, err_write = pcall( writeDB, db, key )
 check( ok_write, "Couldn't write database: %s", err_write )
+
+assert( random:close() )
+assert( urandom:close() )
