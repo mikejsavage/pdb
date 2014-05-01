@@ -188,7 +188,14 @@ elseif arg[ 1 ] == "delete" then
 
 	db[ arg[ 2 ] ] = nil
 elseif arg[ 1 ] == "list" then
+	local passwords = { }
+
 	for k in pairs( db ) do
+		table.insert( passwords, k )
+	end
+	table.sort( passwords )
+
+	for _, k in ipairs( passwords ) do
 		print( k )
 	end
 elseif arg[ 1 ] == "gen" then
