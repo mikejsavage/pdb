@@ -178,6 +178,8 @@ if arg[ 1 ] == "get" then
 
 	if db[ arg[ 2 ] ] then
 		print( db[ arg[ 2 ] ] )
+	else
+		os.exit( 1 )
 	end
 elseif arg[ 1 ] == "add" then
 	check( not db[ arg[ 2 ] ], "%s is already in the database", arg[ 2 ] )
