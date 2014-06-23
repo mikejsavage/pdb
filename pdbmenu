@@ -1,9 +1,7 @@
 #! /bin/sh
 
+set -e
+
 SITE=$(pdb list | dmenu $*)
-
-if [ "$SITE" != "" ]; then
-	PW=$(pdb get "$SITE")
-
-	xdotool type "$PW"
-fi
+PW=$(pdb get "$SITE")
+xdotool type --clearmodifiers "$PW"
