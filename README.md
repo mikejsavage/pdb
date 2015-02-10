@@ -27,10 +27,10 @@ Additionally: xdotool, dmenu for pdbmenu
 Upgrading
 ---------
 
-As of 10th Feb 2015 (commit `xxx`), pdb uses a new database format. I
-have included a utility to update an existing password database, which
-you can run with `lua update-old-db.lua`. Note that it also generates a
-new secret key.
+As of 10th Feb 2015 (commit `22ef6c142d`), pdb uses a new database
+format. I have included a utility to update an existing password
+database, which you can run with `lua update-old-db.lua`. Note that it
+also generates a new secret key.
 
 
 Usage
