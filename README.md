@@ -21,7 +21,7 @@ Requirements
 [symmetric]: https://github.com/mikejsavage/lua-symmetric
 
 lua, [lua-arc4random][arc4], [lua-symmetric][symmetric], lua-cjson  
-Additionally: xdotool, dmenu for pdbmenu
+Optionally: xdotool, dmenu for pdbmenu
 
 
 Upgrading
