@@ -7,7 +7,7 @@ function _M.get( db, name )
 		return "No such password."
 	end
 
-	io.stdout:write( db[ name ] )
+	io.stdout:write( db[ name ] .. "\n" )
 end
 
 function _M.add( db, name )
