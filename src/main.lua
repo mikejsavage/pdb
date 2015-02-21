@@ -121,6 +121,8 @@ if cmd == "init" then
 		return os.exit( 1 )
 	end
 
+	print( "You should chmod 600 " .. paths.key )
+
 	return os.exit( 0 )
 end
 

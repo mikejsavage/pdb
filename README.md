@@ -53,7 +53,6 @@ itself for a full list).
 An example session:
 
 	$ pdb init
-	Initialized empty password db in /home/mike/.pdb/
 	You should chmod 600 /home/mike/.pdb/key2
 	$ pdb add test 
 	Enter a password for test: fdsa
