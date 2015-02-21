@@ -34,7 +34,7 @@ database, which you can run with `lua
 update-1-openssl-to-libsodium.lua`. Note that it also generates a new
 secret key.
 
-As of 21st Feb 2015, (commit `XXX`), pdb uses flatfiles instead of a
+As of 21st Feb 2015, (commit `2dd625b`), pdb uses flatfiles instead of a
 database. You need to run `lua update-2-db-to-flatfiles.lua` if you wish
 to use more recent versions of pdb.
 
