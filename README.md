@@ -21,7 +21,7 @@ Requirements
 [arc4]: https://github.com/mikejsavage/lua-arc4random
 [symmetric]: https://github.com/mikejsavage/lua-symmetric
 
-lua, [lua-arc4random][arc4], [lua-symmetric][symmetric]
+lua, [lua-arc4random][arc4], [lua-symmetric][symmetric]  
 Optionally: xdotool, dmenu for pdbmenu
 
 
