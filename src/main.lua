@@ -1,19 +1,54 @@
 local lfs = require( "lfs" )
 local symmetric = require( "symmetric" )
-local json = require( "cjson.safe" )
 
 local actions = require( "actions" )
+local paths = require( "paths" )
+
+function io.readfile( path )
+	local file, err = io.open( path, "r" )
+	if not file then
+		return nil, err
+	end
+
+	local contents, err = file:read( "*all" )
+	file:close()
+	return contents, err
+end
+
+function io.writefile( path, contents )
+	local file, err = io.open( path, "w" )
+	if not file then
+		return nil, err
+	end
+
+	local ok, err = file:write( contents )
+	if not ok then
+		file:close()
+		return nil, err
+	end
+
+	local ok, err = file:close()
+	if not ok then
+		return nil, err
+	end
+
+	return true
+end
 
 table.unpack = table.unpack or unpack
 
 local default_length = 32
 local default_pattern = "[%w%p ]"
 
+local function eprintf( form, ... )
+	io.stderr:write( form:format( ... ) .. "\n" )
+end
+
 local help =
 	"Usage: " .. arg[ 0 ] .. " <command>\n"
 	.. "where <command> is one of the following:\n"
 	.. "\n"
-	.. "init          - create a new key file and empty database\n"
+	.. "init          - create a new key\n"
 	.. "add <name>    - prompt you to enter a password for <name>\n"
 	.. "get <name>    - print the password stored under <name>\n"
 	.. "delete <name> - delete the password stored under <name>\n"
@@ -25,106 +60,47 @@ local help =
 	.. "    gen test 10 %d - 10 characters, numbers only\n"
 	.. "    gen test \"%l \" - 32 characters, lowercase/spaces"
 
-local dir = os.getenv( "HOME" ) .. "/.pdb/"
-local paths = { db = dir .. "db2", key = dir .. "key2" }
-
 local function load_key()
-	local file, err = io.open( paths.key, "r" )
-	if not file then
-		io.stderr:write( "Unable to open key file: " .. err .. "\n" )
-		io.stderr:write( "You might need to create it with `pdb init`.\n" )
+	local key, err = io.readfile( paths.key )
+	if not key then
+		eprintf( "Unable to read key file: %s", err )
+		eprintf( "You might need to create it with `pdb init`." )
 		return os.exit( 1 )
 	end
-
-	local key = assert( file:read( "*all" ) ) -- TODO
-	file:close()
 
 	return key
-end
-
-local function load_db( key )
-	local file, err = io.open( paths.db, "r" )
-	if not file then
-		io.stderr:write( "Unable to open DB: " .. err .. "\n" )
-		io.stderr:write( "You might need to create it with `pdb init`.\n" )
-		return os.exit( 1 )
-	end
-
-	local ciphertext = assert( file:read( "*all" ) ) -- TODO
-	local plaintext = symmetric.decrypt( ciphertext, key )
-	if not plaintext then
-		io.stderr:write( "DB does not decrypt with the given key.\n" )
-		return os.exit( 1 )
-	end
-
-	local db = json.decode( plaintext )
-	if not db then
-		io.stderr:write( "DB does not appear to be in JSON format.\n" )
-		return os.exit( 1 )
-	end
-	
-	return db
-end
-
--- TODO: write to db2 and os.rename
-local function write_db( db, key )
-	local plaintext = assert( json.encode( db ) )
-	local ciphertext = symmetric.encrypt( plaintext, key )
-
-	local file, err = io.open( paths.db, "w" )
-	if not file then
-		io.stderr:write( "Could not open DB for writing: " .. err .. "\n" )
-		return os.exit( 1 )
-	end
-
-	file:write( ciphertext )
-	-- TODO
-	local ok = assert( file:close() )
 end
 
 local function write_new_key()
 	local key = symmetric.key()
 
-	local file, err = io.open( paths.key, "w" )
-	if not file then
-		io.stderr:write( "Unable to open key file for writing: " .. err .. "\n" )
+	local ok, err = io.writefile( paths.key, key )
+	if not ok then
+		eprintf( "Unable to open key file for writing: %s", err )
 		return os.exit( 1 )
 	end
 
-	assert( file:write( key ) )
-	assert( file:close() )
-
 	return key
 end
-
--- real code starts here
 
 local commands = {
 	add = {
 		args = 1,
 		syntax = "<name>",
-		rewrite = true,
 	},
 	get = {
 		args = 1,
-		syntax = "<name>",
 	},
 	delete = {
 		args = 1,
 		syntax = "<name>",
-		rewrite = true,
 	},
 	list = {
 		args = 0,
 	},
-	touch = {
-		args = 0,
-		rewrite = true,
-	},
 	gen = {
 		args = 3,
 		syntax = "<name> [length] [pattern]",
-		rewrite = true,
 	},
 }
 
@@ -138,15 +114,13 @@ if not cmd then
 end
 
 if cmd == "init" then
-	local file_key = io.open( paths.key, "r" )
-	local file_db = io.open( paths.db, "r" )
-
-	if file_key or file_db then
-		io.stderr:write( "Your key file/DB already exists. Remove them and run init again if you're sure about this.\n" )
+	if io.open( paths.key, "r" ) then
+		eprintf( "Your key file already exists. Remove it and run init again if you're sure about this." )
 		return os.exit( 1 )
 	end
 
 	lfs.mkdir( dir )
+	lfs.mkdir( paths.db )
 
 	local key = write_new_key()
 	write_db( { }, key )
@@ -155,7 +129,6 @@ if cmd == "init" then
 end
 
 local key = load_key()
-local db = load_db( key )
 
 if cmd == "gen" and #arg > 0 then
 	local length
@@ -177,22 +150,27 @@ if cmd == "gen" and #arg > 0 then
 end
 
 if not actions[ cmd ] then
-	io.stderr:write( help .. "\n" )
+	eprintf( "%s", help )
 	return os.exit( 1 )
+end
+
+if commands[ cmd ].args > 0 then
+	if arg[ 1 ]:find( "/" ) then
+		eprintf( "Password name can't contain slashes." )
+		return os.exit( 1 )
+	end
+
+	arg[ 1 ] = paths.db .. arg[ 1 ]
 end
 
 if commands[ cmd ].args ~= #arg then
-	io.stderr:write( "Usage: " .. arg[ 0 ] .. " " .. cmd .. " " .. ( commands[ cmd ].syntax or "" ) .. "\n" )
+	eprintf( "Usage: %s %s %s", arg[ 0 ], cmd, commands[ cmd ].syntax or "" )
 	return os.exit( 1 )
 end
 
-local err = actions[ cmd ]( db, table.unpack( arg ) )
+local err = actions[ cmd ]( key, table.unpack( arg ) )
 
 if err then
-	io.stderr:write( err .. "\n" )
+	eprintf( "%s", err )
 	return os.exit( 1 )
-end
-
-if commands[ cmd ] then
-	write_db( db, key )
 end

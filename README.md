@@ -5,8 +5,9 @@ Security
 --------
 
 pdb uses lua-symmetric, which uses libsodium's secretbox to secure your
-passwords. It also uses lua-arc4random, which uses `arc4random` pulled
-from LibreSSL for generating passwords.
+passwords. It also uses lua-arc4random, which uses LibreSSL's
+`arc4random` for generating passwords. In short, lua-symmetric uses
+standard, modern crypto.
 
 It prompts you for your password when you are adding it rather than
 passing it as a command line argument so people can't grab it from `ps`,
@@ -20,7 +21,7 @@ Requirements
 [arc4]: https://github.com/mikejsavage/lua-arc4random
 [symmetric]: https://github.com/mikejsavage/lua-symmetric
 
-lua, [lua-arc4random][arc4], [lua-symmetric][symmetric], lua-cjson  
+lua, [lua-arc4random][arc4], [lua-symmetric][symmetric]
 Optionally: xdotool, dmenu for pdbmenu
 
 
@@ -29,8 +30,13 @@ Upgrading
 
 As of 10th Feb 2015 (commit `22ef6c142d`), pdb uses a new database
 format. I have included a utility to update an existing password
-database, which you can run with `lua update-old-db.lua`. Note that it
-also generates a new secret key.
+database, which you can run with `lua
+update-1-openssl-to-libsodium.lua`. Note that it also generates a new
+secret key.
+
+As of 21st Feb 2015, (commit `XXX`), pdb uses flatfiles instead of a
+database. You need to run `lua update-2-db-to-flatfiles.lua` if you wish
+to use more recent versions of pdb.
 
 
 Usage
