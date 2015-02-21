@@ -65,6 +65,5 @@ An example session:
 	$ pdb get test2
 	)"QI p!8j.c9g!yQ:d8Dc9XdHKWqKz\"
 
-pdbmenu pipes `pdb list` to dmenu along with any command line arguments
-you gave it, and then `pdb get`s the password you chose and types it for
-you.
+pdbmenu is a little shell script that lets you pick a password with
+dmenu, then types it in for you.
