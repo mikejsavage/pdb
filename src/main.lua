@@ -48,7 +48,7 @@ local help =
 	"Usage: " .. arg[ 0 ] .. " <command>\n"
 	.. "where <command> is one of the following:\n"
 	.. "\n"
-	.. "init          - create a new key\n"
+	.. "init          - generate a new key\n"
 	.. "add <name>    - prompt you to enter a password for <name>\n"
 	.. "get <name>    - print the password stored under <name>\n"
 	.. "delete <name> - delete the password stored under <name>\n"
@@ -64,7 +64,7 @@ local function load_key()
 	local key, err = io.readfile( paths.key )
 	if not key then
 		eprintf( "Unable to read key file: %s", err )
-		eprintf( "You might need to create it with `pdb init`." )
+		eprintf( "You might need to generate one with `pdb init`." )
 		return os.exit( 1 )
 	end
 
@@ -73,14 +73,7 @@ end
 
 local function write_new_key()
 	local key = symmetric.key()
-
-	local ok, err = io.writefile( paths.key, key )
-	if not ok then
-		eprintf( "Unable to open key file for writing: %s", err )
-		return os.exit( 1 )
-	end
-
-	return key
+	return io.writefile( paths.key, key )
 end
 
 local commands = {
@@ -119,11 +112,14 @@ if cmd == "init" then
 		return os.exit( 1 )
 	end
 
-	lfs.mkdir( dir )
+	lfs.mkdir( paths.path )
 	lfs.mkdir( paths.db )
 
-	local key = write_new_key()
-	write_db( { }, key )
+	local ok, err = write_new_key()
+	if not ok then
+		eprintf( "Unable to write key file: %s", err )
+		return os.exit( 1 )
+	end
 
 	return os.exit( 0 )
 end
