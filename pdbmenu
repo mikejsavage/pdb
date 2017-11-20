@@ -4,4 +4,4 @@ set -e
 
 SITE=$(pdb list | dmenu $*)
 PW=$(pdb get "$SITE")
-xdotool type --delay 60 --clearmodifiers "$PW"
+xdotool type --clearmodifiers "$PW"
