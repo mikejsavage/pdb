@@ -42,7 +42,7 @@ end
 function _M.list()
 	local names = { }
 	for file in lfs.dir( paths.db ) do
-		if file ~= "." and file ~= ".." then
+		if file ~= "." and file ~= ".." and file ~= ".git" then
 			table.insert( names, file )
 		end
 	end
